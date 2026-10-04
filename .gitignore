@@ -1,78 +1,105 @@
 ﻿# ============================================================
-# SignBridge — .gitignore
+# SignBridge - Git Ignore
+# Person 1 / Model 1
 # ============================================================
 
-# ----- Python -----
+# ------------------------------------------------------------
+# Python
+# ------------------------------------------------------------
 __pycache__/
 *.py[cod]
-*.class
 *.pyo
 *.pyd
-.Python
+*.so
+
+*.egg-info/
 build/
 dist/
-*.egg-info/
-*.egg
 .eggs/
 
-# ----- Virtual Environments -----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------
+# Virtual environments
+# ------------------------------------------------------------
 .venv/
 venv/
 env/
 ENV/
+
+# Environment / secrets
 .env
+.env.*
+!.env.example
 
-# ----- ML Model Weights & Checkpoints (large binary) -----
-models/checkpoints/*.pth
-models/checkpoints/*.pt
-models/checkpoints/*.ckpt
-models/onnx/*.onnx
+# ------------------------------------------------------------
+# ML model weights
+# Keep trained weights outside normal Git
+# ------------------------------------------------------------
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
 
-# ----- Dataset & Processed Features (large binary/csv) -----
+# ------------------------------------------------------------
+# Dataset
+# CISLR videos and generated dataset files are NOT committed
+# ------------------------------------------------------------
 data/raw/
 data/processed/
 data/train/
 data/val/
 data/test/
+
+# Extracted feature caches
 features/
 models/features/
 
-# Large config data files
-configs/classes_final.json
+# ------------------------------------------------------------
+# Local handoff / temporary integration packages
+# ------------------------------------------------------------
+person2_model1_handoff/
+signbridge_real_model1_connection/
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
 
-# ----- Evaluation Outputs -----
+# ------------------------------------------------------------
+# Local generated evaluation outputs
+# Keep source evaluation scripts in Git
+# ------------------------------------------------------------
 models/evaluation/*.png
 models/evaluation/*.csv
-models/evaluation/*.txt
 
-# ----- Logs -----
+# ------------------------------------------------------------
+# Logs / experiment tracking
+# ------------------------------------------------------------
 logs/
 *.log
 runs/
 wandb/
 
-# ----- Jupyter -----
+# ------------------------------------------------------------
+# Jupyter
+# ------------------------------------------------------------
 .ipynb_checkpoints/
 *.ipynb
 
-# ----- OS -----
+# ------------------------------------------------------------
+# OS
+# ------------------------------------------------------------
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ----- IDEs -----
+# ------------------------------------------------------------
+# IDE
+# ------------------------------------------------------------
 .vscode/
 .idea/
 *.swp
 *~
-
-# ----- Archive / Hand-off bundles -----
-*.zip
-*.tar.gz
-*.tar.bz2
-
-# ----- Temporary -----
-tmp/
-temp/
-scratch/
-*.tmp
