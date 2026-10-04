@@ -1,0 +1,78 @@
+﻿# ============================================================
+# SignBridge — .gitignore
+# ============================================================
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*.class
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# ----- Virtual Environments -----
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ----- ML Model Weights & Checkpoints (large binary) -----
+models/checkpoints/*.pth
+models/checkpoints/*.pt
+models/checkpoints/*.ckpt
+models/onnx/*.onnx
+
+# ----- Dataset & Processed Features (large binary/csv) -----
+data/raw/
+data/processed/
+data/train/
+data/val/
+data/test/
+features/
+models/features/
+
+# Large config data files
+configs/classes_final.json
+
+# ----- Evaluation Outputs -----
+models/evaluation/*.png
+models/evaluation/*.csv
+models/evaluation/*.txt
+
+# ----- Logs -----
+logs/
+*.log
+runs/
+wandb/
+
+# ----- Jupyter -----
+.ipynb_checkpoints/
+*.ipynb
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- IDEs -----
+.vscode/
+.idea/
+*.swp
+*~
+
+# ----- Archive / Hand-off bundles -----
+*.zip
+*.tar.gz
+*.tar.bz2
+
+# ----- Temporary -----
+tmp/
+temp/
+scratch/
+*.tmp

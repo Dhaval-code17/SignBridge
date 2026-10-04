@@ -1,0 +1,17 @@
+{
+  "name": "SignBridge — ISL Translator",
+  "short_name": "SignBridge",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07101f",
+  "theme_color": "#0b1220",
+  "description": "Indian Sign Language to English speech translation PWA.",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

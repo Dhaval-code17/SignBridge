@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="SignBridge - Indian Sign Language to English Speech Translator">
+  <title>SignBridge — ISL Translator</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">SB</div>
+      <div>
+        <div class="brand-name">SignBridge</div>
+        <div class="brand-subtitle">Indian Sign Language → English</div>
+      </div>
+    </div>
+    <div class="header-status">
+      <span class="status-dot" id="systemDot"></span>
+      <span id="systemStatus">Ready</span>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">LIVE TRANSLATION</p>
+        <h1>Turn signs into speech.</h1>
+        <p class="hero-copy">
+          Camera input → visual features → temporal sign sequence → English → speech.
+        </p>
+      </div>
+      <div class="pipeline" aria-label="Model pipeline">
+        <span>Camera</span>
+        <span>→</span>
+        <span>Model 1</span>
+        <span>→</span>
+        <span>Model 2</span>
+        <span>→</span>
+        <span>Model 3</span>
+        <span>→</span>
+        <span>Voice</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card camera-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">INPUT</p>
+            <h2>Camera</h2>
+          </div>
+          <span class="badge" id="cameraBadge">OFF</span>
+        </div>
+
+        <div class="video-wrap">
+          <video id="video" autoplay playsinline muted></video>
+          <div class="camera-placeholder" id="cameraPlaceholder">
+            <div class="camera-icon">◉</div>
+            <p>Camera is off</p>
+            <small>Allow camera access to begin.</small>
+          </div>
+          <div class="recording-pill hidden" id="recordingPill">
+            <span></span> Detecting signs
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="btn primary" id="startBtn">Start Camera</button>
+          <button class="btn secondary" id="stopBtn" disabled>Stop</button>
+          <button class="btn ghost" id="resetBtn">Reset</button>
+        </div>
+      </article>
+
+      <article class="card result-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">OUTPUT</p>
+            <h2>Translation</h2>
+          </div>
+          <span class="badge neutral" id="inferenceBadge">MOCK MODE</span>
+        </div>
+
+        <div class="result-block">
+          <div class="label">Detected sign sequence</div>
+          <div class="sign-sequence" id="signSequence">—</div>
+        </div>
+
+        <div class="result-block">
+          <div class="label">English translation</div>
+          <div class="translation" id="translation">Start the camera to begin.</div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn primary" id="speakBtn" disabled>🔊 Speak</button>
+          <button class="btn secondary" id="copyBtn" disabled>Copy</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="metrics-grid">
+      <div class="metric card">
+        <div class="label">Model 1 feature shape</div>
+        <strong id="featureShape">[T, 960]</strong>
+      </div>
+      <div class="metric card">
+        <div class="label">Sampling</div>
+        <strong id="sampleFps">8 FPS</strong>
+      </div>
+      <div class="metric card">
+        <div class="label">End-to-end latency</div>
+        <strong id="latency">—</strong>
+      </div>
+      <div class="metric card">
+        <div class="label">FPS</div>
+        <strong id="fps">—</strong>
+      </div>
+    </section>
+
+    <section class="card activity-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">STATUS</p>
+          <h2>Activity</h2>
+        </div>
+        <button class="text-btn" id="clearLogBtn">Clear</button>
+      </div>
+      <div class="activity-log" id="activityLog" aria-live="polite"></div>
+    </section>
+
+    <section class="card testing-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">DEMO TESTING</p>
+          <h2>Pipeline test</h2>
+        </div>
+        <span class="badge neutral">LOCAL</span>
+      </div>
+      <p class="testing-copy">
+        This test uses mock outputs until Person 2 and Person 3 expose their inference endpoints.
+        It verifies the UI state flow without claiming model accuracy.
+      </p>
+      <div class="test-row">
+        <button class="btn secondary" id="runTestBtn">Run mock pipeline test</button>
+        <span id="testResult" class="test-result">Not run</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>SignBridge</span>
+    <span>Model 1 → Model 2 → Model 3</span>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
