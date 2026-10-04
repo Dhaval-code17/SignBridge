@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Data directory (exclude heavy raw dataset samples)
+data/continuous/
+data/raw/
+*.npy
+
+# IDE and OS settings
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Handover folder (excluded from GitHub)
+person2_handover/

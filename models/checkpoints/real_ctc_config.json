@@ -1,0 +1,11 @@
+{
+    "input_dim": 960,
+    "d_model": 256,
+    "nhead": 8,
+    "num_layers": 4,
+    "dim_feedforward": 512,
+    "num_classes": 39,
+    "ctc_blank_id": 39,
+    "confidence_threshold": 0.70,
+    "sample_fps": 8.0
+}
