@@ -1,28 +1,72 @@
-# Byte-compiled / optimized / DLL files
+# ============================================================
+# SignBridge - Git Ignore
+# Person 2 / Model 2
+# ============================================================
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
+*.pyo
+*.pyd
 *.so
+*.egg-info/
+build/
+dist/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual Environments
-venv/
+# Virtual environments
 .venv/
+venv/
 env/
 ENV/
 
-# Data directory (exclude heavy raw dataset samples)
-data/continuous/
+# Environment / secrets
+.env
+.env.*
+
+# Large ML model weights (keep specific model 2 checkpoints tracked)
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+
+!models/checkpoints/temporal_classifier_best.pth
+!models/checkpoints/temporal_classifier_classes.json
+!models/model2/model2.onnx
+
+# Dataset
 data/raw/
+data/processed/
+data/train/
+data/val/
+data/test/
+data/continuous/
 *.npy
 
-# IDE and OS settings
-.vscode/
-.idea/
+# Extracted feature caches
+features/
+models/features/
+
+# Local handoff / temporary integration packages
+person2_handover/
+person2_model1_handoff/
+signbridge_real_model1_connection/
+*.zip
+*.tar
+*.tar.gz
+
+# Logs & IDE
+logs/
+*.log
+runs/
+wandb/
+.ipynb_checkpoints/
 .DS_Store
 Thumbs.db
-*.log
-
-# Handover folder (excluded from GitHub)
-person2_handover/
+desktop.ini
+.vscode/
+.idea/
