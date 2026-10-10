@@ -1,8 +1,8 @@
 # ============================================================
-# SignBridge - Git Ignore
+# SignBridge - Git Ignore (Clean Repository Configuration)
 # ============================================================
 
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *.pyo
@@ -42,9 +42,23 @@ model3_backup/
 !models/checkpoints/temporal_classifier_best.pth
 !models/checkpoints/temporal_classifier_classes.json
 
+# Exclude legacy folders from GitHub
+backend/
+configs/
+evaluation/
+inference/
+preprocessing/
+training/
+person2_handover/
+"demo video/"
+README_PERSON2.md
+requirements.txt.txt
+batch_test_all_videos.py
+test_angry_video.py
+test_ui_api_post.py
+
 # Temporary data & caches
-data/synthetic/
-data/sentence_frames_cache/
+data/
 *.log
 finetune_log.txt
 training_log.txt
