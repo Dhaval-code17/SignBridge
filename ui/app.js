@@ -1,4 +1,4 @@
-﻿const state = {
+const state = {
   stream: null,
   captureTimer: null,
   frameBuffer: [],
@@ -586,6 +586,11 @@ async function startCamera() {
     $("startBtn").disabled =
       true;
 
+    if ($("recordBtn")) {
+      $("recordBtn").disabled =
+        false;
+    }
+
     $("stopBtn").disabled =
       false;
 
@@ -719,6 +724,11 @@ function stopCamera() {
       false;
   }
 
+  if ($("recordBtn")) {
+    $("recordBtn").disabled =
+      true;
+  }
+
   if ($("stopBtn")) {
     $("stopBtn").disabled =
       true;
@@ -814,38 +824,35 @@ function startCapture() {
 
         // Prevent unlimited buffering.
         if (
-          state.frameBuffer.length > 20
+          state.frameBuffer.length > 36
         ) {
 
           state.frameBuffer =
             state.frameBuffer.slice(
-              -20
+              -36
             );
         }
 
         // ----------------------------------------------------
-        // First prediction:
-        // 16 frames
-        //
-        // Next predictions:
-        // keep 12 + add 4 new frames
+        // Prediction window: 24 frames (~3s at 8 FPS)
+        // Step: keep 16 frames, add 8 new frames
         // ----------------------------------------------------
 
         if (
-          state.frameBuffer.length >= 16 &&
+          state.frameBuffer.length >= 24 &&
           !state.modelBusy
         ) {
 
           const frames =
             state.frameBuffer.slice(
-              -16
+              -24
             );
 
-          // Keep 12 frames so the next prediction
-          // uses 4 new frames.
+          // Keep 16 frames so the next prediction
+          // uses 8 new frames (~1s step).
           state.frameBuffer =
             state.frameBuffer.slice(
-              -12
+              -16
             );
 
           state.modelBusy =
@@ -969,6 +976,19 @@ async function processCameraFrames(
         data.similarity || 0
       );
 
+    const MIN_CONFIDENCE = 0.25;
+
+    if (similarity < MIN_CONFIDENCE) {
+      setLiveRecognitionState(
+        "MODEL 1 ACTIVE",
+        "Waiting for sign…",
+        `Low confidence (${similarity.toFixed(3)}) · ${data.num_frames} frames`,
+        "ready",
+        data.top5 || []
+      );
+      return;
+    }
+
     state.lastPrediction =
       gloss;
 
@@ -983,7 +1003,7 @@ async function processCameraFrames(
 
       $("translation")
         .textContent =
-        gloss;
+        data.translated_text || gloss;
     }
 
     if ($("inferenceBadge")) {
@@ -1565,7 +1585,7 @@ async function recognizeUploadedVideo() {
 
     $("translation")
       .textContent =
-      gloss;
+      data.translated_text || gloss;
 
 
     $("featureShape")
@@ -2081,11 +2101,101 @@ $("startBtn")
   );
 
 
+// ============================================================
+// EXPLICIT 3-SECOND SIGN CLIP RECORDING
+// ============================================================
+
+async function recordSignClip() {
+  if (!state.cameraOn || state.modelBusy) return;
+
+  stopCapture();
+  state.modelBusy = true;
+  if ($("recordBtn")) $("recordBtn").disabled = true;
+
+  setLiveRecognitionState(
+    "RECORDING SIGN",
+    "Perform your sign now…",
+    "Capturing 24 frames over 3 seconds.",
+    "active"
+  );
+  log("Started 3-second sign clip recording...");
+
+  const clipFrames = [];
+  const totalFrames = 24;
+  const intervalMs = 125;
+
+  for (let i = 0; i < totalFrames; i++) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const frame = captureFrame();
+    if (frame) clipFrames.push(frame);
+
+    setLiveRecognitionState(
+      "RECORDING SIGN",
+      `Frame ${clipFrames.length} / ${totalFrames}`,
+      "Keep signing...",
+      "active"
+    );
+  }
+
+  log(`Captured ${clipFrames.length} frames. Processing model pipeline...`);
+  setLiveRecognitionState(
+    "ANALYZING SIGN",
+    "Processing Model 1 + Model 2 + Model 3...",
+    "Executing sentence prototype matching...",
+    "active"
+  );
+
+  try {
+    const response = await fetch("/api/model1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frames: clipFrames }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    const gloss = data.predicted_gloss || "UNKNOWN";
+    const similarity = Number(data.similarity || 0);
+
+    if ($("signSequence")) $("signSequence").textContent = gloss;
+    if ($("translation")) $("translation").textContent = data.translated_text || gloss;
+    if ($("speakBtn")) $("speakBtn").disabled = false;
+    if ($("copyBtn")) $("copyBtn").disabled = false;
+
+    setLiveRecognitionState(
+      "● SIGN RECOGNIZED",
+      gloss,
+      `Similarity: ${similarity.toFixed(4)} · ${data.num_frames} frames`,
+      "active",
+      data.top5 || []
+    );
+    log(`CLIP RECORDING RESULT: ${gloss} (similarity=${similarity.toFixed(4)})`);
+  } catch (err) {
+    log(`Clip recording error: ${err.message}`);
+    setLiveRecognitionState("RECOGNITION ERROR", "—", err.message, "uncertain");
+  } finally {
+    state.modelBusy = false;
+    if (state.cameraOn) {
+      if ($("recordBtn")) $("recordBtn").disabled = false;
+      startCapture();
+    }
+  }
+}
+
+
 $("stopBtn")
   .addEventListener(
     "click",
     stopCamera
   );
+
+
+if ($("recordBtn")) {
+  $("recordBtn").addEventListener("click", recordSignClip);
+}
 
 
 $("resetBtn")

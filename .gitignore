@@ -1,6 +1,5 @@
 # ============================================================
 # SignBridge - Git Ignore
-# Person 2 / Model 2
 # ============================================================
 
 # Python
@@ -14,8 +13,6 @@ build/
 dist/
 .eggs/
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
 
 # Virtual environments
 .venv/
@@ -27,44 +24,33 @@ ENV/
 .env
 .env.*
 
-# Large ML model weights (keep specific model 2 checkpoints tracked)
-*.pth
-*.pt
-*.ckpt
+# Large ML weights & training optimizer checkpoints (>100MB)
 *.safetensors
-*.onnx
+*.bin
+*.pt
+optimizer.pt
+scheduler.pt
+rng_state.pth
+t5_checkpoints/
+model3/SignBridge_model/t5_checkpoints/
+model3_backup/
 
+# Track essential small checkpoints & prototype matrices
+!models/checkpoints/mobilenet_v3_full_vocab_contrastive_best.pth
+!models/checkpoints/sentence_classifier_head.pth
+!models/checkpoints/prototype_matcher.npz
 !models/checkpoints/temporal_classifier_best.pth
 !models/checkpoints/temporal_classifier_classes.json
-!models/model2/model2.onnx
 
-# Dataset
-data/raw/
-data/processed/
-data/train/
-data/val/
-data/test/
-data/continuous/
-*.npy
-
-# Extracted feature caches
-features/
-models/features/
-
-# Local handoff / temporary integration packages
-person2_handover/
-person2_model1_handoff/
-signbridge_real_model1_connection/
-*.zip
-*.tar
-*.tar.gz
-
-# Logs & IDE
-logs/
+# Temporary data & caches
+data/synthetic/
+data/sentence_frames_cache/
 *.log
-runs/
-wandb/
-.ipynb_checkpoints/
+finetune_log.txt
+training_log.txt
+scratch/
+
+# IDE & OS files
 .DS_Store
 Thumbs.db
 desktop.ini

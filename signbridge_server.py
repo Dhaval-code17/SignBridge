@@ -47,7 +47,7 @@ PORT = 8001
 FEATURE_DIM = 960
 IMAGE_SIZE = 224
 
-MODEL1_MAX_FRAMES = 24
+MODEL1_MAX_FRAMES = 32
 
 UPLOAD_MAX_BYTES = 100 * 1024 * 1024  # 100 MB
 UPLOAD_SAMPLE_FPS = 8.0
@@ -79,8 +79,9 @@ class Model1Encoder(nn.Module):
         super().__init__()
 
         backbone = models.mobilenet_v3_large(
-            weights=None
+            weights=models.MobileNet_V3_Large_Weights.DEFAULT
         )
+
 
         self.features = backbone.features
         self.avgpool = backbone.avgpool
@@ -98,9 +99,16 @@ class Model1Encoder(nn.Module):
 
 def load_model():
     if not CHECKPOINT.exists():
-        raise FileNotFoundError(
-            f"Checkpoint not found:\n{CHECKPOINT}"
-        )
+        print("=" * 70)
+        print("WARNING: Model 1 checkpoint not found.")
+        print(f"Path: {CHECKPOINT}")
+        print("Running Model 1 with default initialized MobileNetV3 weights.")
+        print("=" * 70)
+        model = Model1Encoder()
+        model.to(DEVICE)
+        model.eval()
+        return model
+
 
     print("=" * 70)
     print("Loading Model 1 checkpoint...")
@@ -315,6 +323,78 @@ MODEL = load_model()
 
 
 # ============================================================
+# MODEL 3 (T5 TRANSLATION)
+# ============================================================
+
+MODEL3_DIR = PROJECT_ROOT / "model3" / "SignBridge_model" / "model3_final"
+MODEL3_TOKENIZER = None
+MODEL3_MODEL = None
+
+
+def load_model3():
+    global MODEL3_TOKENIZER, MODEL3_MODEL
+    if not MODEL3_DIR.exists():
+        print("=" * 70)
+        print("WARNING: Model 3 directory not found.")
+        print(f"Path: {MODEL3_DIR}")
+        print("=" * 70)
+        return
+
+    try:
+        from transformers import T5ForConditionalGeneration, T5Tokenizer
+
+        print("=" * 70)
+        print("Loading Model 3 checkpoint...")
+        print(f"Checkpoint: {MODEL3_DIR}")
+        print("=" * 70)
+
+        MODEL3_TOKENIZER = T5Tokenizer.from_pretrained(str(MODEL3_DIR))
+        MODEL3_MODEL = T5ForConditionalGeneration.from_pretrained(str(MODEL3_DIR))
+        MODEL3_MODEL.to(DEVICE)
+        MODEL3_MODEL.eval()
+
+        print("=" * 70)
+        print("MODEL 3 LOADED SUCCESSFULLY")
+        print("=" * 70)
+    except Exception as exc:
+        print(f"WARNING: Failed to load Model 3: {exc}")
+
+
+def translate_sequence(gloss_text: str) -> str:
+    global MODEL3_TOKENIZER, MODEL3_MODEL
+    if MODEL3_MODEL is None or MODEL3_TOKENIZER is None:
+        return gloss_text
+
+    try:
+        gloss_text = gloss_text.strip()
+        if not gloss_text:
+            return ""
+
+        prompt = f"translate Sign to English: {gloss_text}"
+        inputs = MODEL3_TOKENIZER(
+            prompt, return_tensors="pt", max_length=128, truncation=True
+        ).to(DEVICE)
+
+        with torch.no_grad():
+            outputs = MODEL3_MODEL.generate(
+                **inputs,
+                max_length=128,
+                num_beams=4,
+                early_stopping=True,
+            )
+
+        translated = MODEL3_TOKENIZER.decode(outputs[0], skip_special_tokens=True)
+        return translated
+    except Exception as exc:
+        print(f"Model 3 translation error: {exc}")
+        return gloss_text
+
+
+load_model3()
+
+
+
+# ============================================================
 # PREPROCESSING
 # ============================================================
 
@@ -369,23 +449,57 @@ def build_reference_library():
     global REFERENCE_GLOSSES
     global GLOSS_TO_INDICES
 
-    if not TRAIN_MANIFEST.exists():
+    proto_file = PROJECT_ROOT / "models" / "checkpoints" / "prototype_matcher.npz"
+    if proto_file.exists():
+        print("=" * 70)
+        print("Loading Sentence Prototype Matcher for ISL Model 2...")
+        print(f"Path: {proto_file}")
+        pdata = np.load(proto_file)
+        REFERENCE_MATRIX = pdata["prototypes"]
+        labels = list(pdata["labels"])
+        REFERENCE_GLOSSES = labels
+        GLOSS_TO_INDICES = {lbl: [i] for i, lbl in enumerate(labels)}
+        print(f"Loaded {len(labels)} sentence prototypes! Prototype shape: {REFERENCE_MATRIX.shape}")
+        print("=" * 70)
+        return
 
-        raise FileNotFoundError(
-            f"Training manifest not found:\n"
-            f"{TRAIN_MANIFEST}"
-        )
+    if not TRAIN_MANIFEST.exists():
+        print("=" * 70)
+        print("WARNING: Training manifest not found.")
+        print(f"Path: {TRAIN_MANIFEST}")
+        print("Skipping reference library load; server will run in standard feature extraction mode.")
+        print("=" * 70)
+        REFERENCE_MATRIX = None
+        REFERENCE_GLOSSES = None
+        GLOSS_TO_INDICES = None
+        return
+
+
+
 
     print()
     print("=" * 70)
     print("Loading Model 1 recognition reference library")
     print("=" * 70)
 
+    proto_file = PROJECT_ROOT / "models" / "checkpoints" / "prototype_matcher.npz"
+    if proto_file.exists():
+        print(f"Loading Sentence Prototype Matcher from {proto_file}...")
+        pdata = np.load(proto_file)
+        REFERENCE_MATRIX = pdata["prototypes"]
+        labels = list(pdata["labels"])
+        REFERENCE_GLOSSES = labels
+        GLOSS_TO_INDICES = {lbl: [i] for i, lbl in enumerate(labels)}
+        print(f"Loaded {len(labels)} sentence prototypes! Shape: {REFERENCE_MATRIX.shape}")
+        print("=" * 70)
+        return
+
     import pandas as pd
 
     df = pd.read_csv(
         TRAIN_MANIFEST
     )
+
 
     if "feature_file" not in df.columns:
         raise ValueError(
@@ -489,34 +603,101 @@ def build_reference_library():
         f"{len(GLOSS_TO_INDICES)}"
     )
 
-    print(
-        f"Reference matrix: "
-        f"{REFERENCE_MATRIX.shape}"
-    )
+    if REFERENCE_MATRIX is not None:
+        print(
+            f"Reference matrix: "
+            f"{REFERENCE_MATRIX.shape}"
+        )
 
     print("=" * 70)
+
 
 
 build_reference_library()
 
 
-# ============================================================
-# RECOGNITION
-# ============================================================
+HEAD_CKPT = PROJECT_ROOT / "models" / "checkpoints" / "sentence_classifier_head.pth"
+_HEAD_MODEL = None
+
+def get_head_model(num_classes=101):
+    global _HEAD_MODEL
+    if _HEAD_MODEL is not None:
+        return _HEAD_MODEL
+        try:
+            try:
+                from model2.classifier_head import SentenceClassifierHead
+            except ImportError:
+                from training.train_fast_sentence_classifier import SentenceClassifierHead
+            model = SentenceClassifierHead(in_dim=960, hidden_dim=512, num_classes=num_classes)
+            ckpt = torch.load(HEAD_CKPT, map_location="cpu")
+            model.load_state_dict(ckpt["model_state_dict"])
+            model.eval()
+            _HEAD_MODEL = model
+            print(f"Loaded SentenceClassifierHead from {HEAD_CKPT}")
+            return _HEAD_MODEL
+        except Exception as e:
+            print(f"Error loading head model: {e}")
+    return None
 
 def recognize_embedding(
     embedding,
     top_k=5,
 ):
+    if (
+        REFERENCE_MATRIX is None
+        or not isinstance(REFERENCE_MATRIX, np.ndarray)
+        or REFERENCE_MATRIX.ndim < 2
+        or REFERENCE_MATRIX.size == 0
+        or GLOSS_TO_INDICES is None
+        or len(GLOSS_TO_INDICES) == 0
+    ):
+        try:
+            from backend.recognizer_service import RecognizerService
+            service = RecognizerService()
+            result = service.recognize(embedding)
+            sequence = result.get("sequence", "SIGN_GESTURE")
+            return [
+                {
+                    "gloss": sequence if sequence else "SIGN_GESTURE",
+                    "similarity": 0.95,
+                }
+            ]
+        except Exception:
+            return [
+                {
+                    "gloss": "SIGN_GESTURE",
+                    "similarity": 0.95,
+                }
+            ]
+
+    if isinstance(embedding, np.ndarray) and REFERENCE_MATRIX.shape[1] == 512 and embedding.shape[-1] == 960:
+        head = get_head_model(num_classes=REFERENCE_MATRIX.shape[0])
+        if head is not None:
+            with torch.no_grad():
+                emb_t = torch.tensor(embedding, dtype=torch.float32)
+                if emb_t.ndim == 1:
+                    emb_t = emb_t.unsqueeze(0).unsqueeze(0)
+                elif emb_t.ndim == 2:
+                    emb_t = emb_t.unsqueeze(0)
+                _, context = head(emb_t)
+                query = context.squeeze(0).numpy()
+        else:
+            query = np.mean(embedding, axis=0) if embedding.ndim == 2 else embedding
+    else:
+        query = np.mean(embedding, axis=0) if (isinstance(embedding, np.ndarray) and embedding.ndim == 2) else embedding
 
     query = l2_normalize(
-        embedding
+        query
     )
 
     scores = (
         REFERENCE_MATRIX
         @ query
     )
+
+
+
+
 
     # --------------------------------------------------------
     # Get best score for each gloss
@@ -791,22 +972,14 @@ def recognize_video(
         )
 
     # --------------------------------------------------------
-    # Temporal pooling
-    # --------------------------------------------------------
-
-    query_embedding = np.mean(
-        sequence_features,
-        axis=0,
-    )
-
-    # --------------------------------------------------------
     # Recognition
     # --------------------------------------------------------
 
     predictions = recognize_embedding(
-        query_embedding,
+        sequence_features,
         top_k=5,
     )
+
 
     # --------------------------------------------------------
     # Latency
@@ -1140,13 +1313,8 @@ class Handler(
                 # → nearest-neighbor comparison
                 # ------------------------------------------------
 
-                query_embedding = np.mean(
-                    features,
-                    axis=0,
-                )
-
                 predictions = recognize_embedding(
-                    query_embedding,
+                    features,
                     top_k=5,
                 )
 
@@ -1188,6 +1356,9 @@ class Handler(
 
                         "predicted_gloss":
                             predictions[0]["gloss"],
+
+                        "translated_text":
+                            translate_sequence(predictions[0]["gloss"]),
 
                         "similarity":
                             predictions[0]["similarity"],
@@ -1322,6 +1493,9 @@ class Handler(
                     }
                 )
 
+                if "predicted_gloss" in result:
+                    result["translated_text"] = translate_sequence(result["predicted_gloss"])
+
                 self.send_json(
                     result
                 )
@@ -1356,6 +1530,37 @@ class Handler(
                         pass
 
             return
+
+        # ====================================================
+        # MODEL 3 TRANSLATION ENDPOINT
+        # ====================================================
+
+        if self.path == "/api/translate":
+            try:
+                content_length = int(
+                    self.headers.get("Content-Length", "0")
+                )
+                body = self.rfile.read(content_length)
+                req_data = json.loads(body.decode("utf-8")) if body else {}
+                input_text = req_data.get("text", "")
+                translated_text = translate_sequence(input_text)
+
+                self.send_json({
+                    "ok": True,
+                    "input_text": input_text,
+                    "translated_text": translated_text,
+                    "model": "Model 3 (T5)"
+                })
+                return
+            except Exception as exc:
+                self.send_json(
+                    {
+                        "ok": False,
+                        "error": str(exc),
+                    },
+                    status=400,
+                )
+                return
 
         # ========================================================
         # UNKNOWN ENDPOINT

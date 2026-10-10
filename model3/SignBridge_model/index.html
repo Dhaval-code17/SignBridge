@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SignBridge - Member 3 Translation UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+    input { width: 90%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; }
+    button:hover { background: #0056b3; }
+    .result-box { margin-top: 20px; text-align: left; background: #eef2f5; padding: 15px; border-radius: 8px; }
+    .label { font-weight: bold; color: #555; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>SignBridge Translation</h2>
+  
+  <input type="text" id="signInput" placeholder="Enter sign sequence (e.g., ME COLLEGE GO TOMORROW)">
+  <br>
+  <button onclick="translateAndSpeak()">Translate & Speak</button>
+
+  <div class="result-box">
+    <p><span class="label">Detected Signs:</span> <span id="detectedSigns">-</span></p>
+    <p><span class="label">Translation:</span> <span id="translatedText">-</span></p>
+    <p><span class="label">Confidence:</span> <span id="confidenceScore">-</span></p>
+  </div>
+
+  <button onclick="speakTranslation()">🔊 Replay Speech</button>
+</div>
+
+<script>
+  let currentTranslation = "";
+
+  async function translateAndSpeak() {
+    const inputVal = document.getElementById("signInput").value.trim();
+    if (!inputVal) return alert("Please enter a sign sequence!");
+
+    // 1. Call FastAPI Backend Server
+    try {
+      const response = await fetch("http://localhost:8000/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence: inputVal })
+      });
+
+      const data = await response.json();
+
+      // 2. Display Results in UI
+      document.getElementById("detectedSigns").innerText = data.sign_sequence;
+      document.getElementById("translatedText").innerText = data.translation;
+      document.getElementById("confidenceScore").innerText = (data.confidence * 100) + "%";
+
+      currentTranslation = data.translation;
+
+      // 3. Trigger Native Browser Text-to-Speech (TTS)
+      speakTranslation();
+
+    } catch (err) {
+      alert("Error connecting to server. Make sure server.py is running!");
+    }
+  }
+
+  function speakTranslation() {
+    if (!currentTranslation) return;
+    const utterance = new SpeechSynthesisUtterance(currentTranslation);
+    utterance.lang = "en-US";
+    window.speechSynthesis.speak(utterance);
+  }
+</script>
+
+</body>
+</html>
